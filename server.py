@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, json
 from flask import request
 from flask_cors import CORS, cross_origin
 from io import StringIO, BytesIO
@@ -8,11 +8,7 @@ from sklearn import linear_model
 from flask import Flask, session
 from flask import jsonify
 from flask_session import Session
-
-# from flask import Flask, session
-# from flask.ext.session import Session
-
-# from flask_ext_session import Session
+import pickle
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
@@ -34,60 +30,76 @@ def hello_world():
 
 @app.route('/post/prep', methods=['POST', 'OPTIONS'])
 def upload():
-    # if request.method == 'OPTIONS':
-    #     resp = Response()
-    #     resp.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:3000/'
-    #     resp.headers['Access-Control-Allow-Credentials'] = True
-    #     resp.headers['Access-Control-Allow-Headers'] = "Content-Type"
-
-    #     return resp
-    # print(type(request.files['file']))
+   
     print(request.files['file'])
     df = pd.read_csv(BytesIO(request.files['file'].read()))
-    session['df'] = df
     
     numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
     cols = numeric_cols
-    session['cols'] = cols
-    
 
     return jsonify(cols)
 
 @app.route('/post/train', methods=['POST'])
 def trainmodel():
+    
+    # print(request.files)
+    # print(request.form)
+    
+    # print(request.files['file'].filename)
 
-    # if request.method == 'OPTIONS':
-    #     resp = Response()
-    #     resp.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:3000/'
-    #     resp.headers['Access-Control-Allow-Credentials'] = True
-    #     resp.headers['Access-Control-Allow-Headers'] = "Content-Type"
+    fil = request.files['file']
 
-        # return resp
+    df = pd.read_csv(BytesIO(request.files['file'].read()))
+    col = request.form['column_name']
+    
+    reg = linear_model.LinearRegression()
 
-    # col_name = request.json['column_name'] 
-    print(session['df'])
-    # reg = linear_model.LinearRegression()
-    # reg.fit()
+    df=df.select_dtypes(include=np.number)
+
+    reg.fit(X=df.drop(columns=[col]), y=df[col])
+    
+
+    with open(f'{fil.filename[:-4]}.pickle', 'wb') as handle:
+        pickle.dump(reg, handle, protocol=pickle.HIGHEST_PROTOCOL)    
+
+    # reg2 = pickle.loads(s)
+    # preds=reg2.predict(df.drop(columns=[col]))
 
     return '200'
 
-# @app.route('/post/pred', methods=['POST'])
-# def pred():
-#     pass
+@app.route('/post/pred', methods=['POST'])
+def pred():
+    
+    fil = request.files['file']
+    df = pd.read_csv(BytesIO(request.files['file'].read()))
 
-@app.route('/get/cols', methods=['GET'])
-def getcols():
-    # if request.method == 'OPTIONS':
-    #     resp = Response()
-    #     resp.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:3000/'
-    #     resp.headers['Access-Control-Allow-Credentials'] = True
-    #     resp.headers['Access-Control-Allow-Headers'] = "Content-Type"
+    df=df.select_dtypes(include=np.number)
 
-    #     return resp
-    # return '200'
-    print(session['cols'])
-    # print(session.get('cols'))
-    return jsonify(session['cols'])
+    col = request.form['column_name']
+
+    with open(f'{fil.filename[:-4]}.pickle', 'rb') as handle:
+        res=pickle.load(handle)
+    
+    ret = res.predict(df.drop(columns=[col]))
+    
+    print('preds')
+    print(ret)
+
+    return jsonify(ret.tolist())
+
+# @app.route('/get/cols', methods=['GET'])
+# def getcols():
+#     # if request.method == 'OPTIONS':
+#     #     resp = Response()
+#     #     resp.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:3000/'
+#     #     resp.headers['Access-Control-Allow-Credentials'] = True
+#     #     resp.headers['Access-Control-Allow-Headers'] = "Content-Type"
+
+#     #     return resp
+#     # return '200'
+#     print(session['cols'])
+#     # print(session.get('cols'))
+#     return jsonify(session['cols'])
 
 # @app.after_request
 # def after_request(response):

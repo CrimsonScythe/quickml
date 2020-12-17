@@ -1,6 +1,6 @@
 import React from 'react';
 import {connect} from 'react-redux'
-import {getCols, uploadFile, trainModel} from '../actions'
+import {getCols, uploadFile, trainModel, predModel} from '../actions'
 
 // import StreamForm from './StreamForm'
 
@@ -13,18 +13,16 @@ class FileUpload extends React.Component {
     onFileChange = (event) => {
         event.preventDefault()
         console.log('change')
-        const f = event.target.value
-        // this.props.setFile(f)
+      
         this.setState({selectedFile: event.target.files[0]})
     }
 
     
     onFileUpload = () => {
       
-        const formData = new FormData()
-        formData.append('file', this.state.selectedFile)
+        
 
-        this.props.uploadFile(formData)
+        this.props.uploadFile(this.state.selectedFile)
         
     }
 
@@ -55,22 +53,32 @@ class FileUpload extends React.Component {
 
     onTrain = () => {
         if (this.state.dropselected) {
-            console.log(this.state.dropselected)
-            this.props.trainModel(this.state.dropselected)
+       
+            this.props.trainModel(this.state.dropselected, this.state.selectedFile)
         }
     }
 
+    onPredict = () => {
+        this.props.predModel(this.state.dropselected, this.state.selectedFile)
+    }
+
     modelPredict = () => {
-        if (this.state.model) {
+
+        if (this.props.model['modeltrainresponse']) {
             return (
-                <button>PREDICT!</button>
+                <button onClick={this.onPredict}>PREDICT!</button>
             )
         }
     }
 
+    results = () => {
+        if (this.props.model['modelpredresponse']) {
+            console.log('PREDICTIONS:')
+            console.log(this.props.model['modelpredresponse'])
+        }
+    }
+
     render() {
-        console.log('rendered')
-        console.log(this.props.file)
         
         return (
             <div>
@@ -79,10 +87,13 @@ class FileUpload extends React.Component {
                 <input type="file" onChange={this.onFileChange} /> 
                 <button onClick={this.onFileUpload}> Upload! </button> 
                 {this.dropDown()}
+                <div></div>
                 <button onClick={this.onTrain}> Train! </button>
-                {this.modelPredict}
+                <div></div>
+                {this.modelPredict()}
+                <div></div>
+                {this.results()}
             </div> 
-            
             </div>
         )
     }
@@ -95,4 +106,4 @@ const mapStateToProps = (state) => {
     }
 }
 
-export default connect(mapStateToProps, {uploadFile, getCols, trainModel}) (FileUpload)
+export default connect(mapStateToProps, {uploadFile, getCols, trainModel, predModel}) (FileUpload)

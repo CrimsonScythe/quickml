@@ -1,4 +1,3 @@
-import axios from 'axios'
 import React from 'react'
 import FileUpload from './FileUpload'
 import { Router, Route, Switch} from 'react-router-dom';
