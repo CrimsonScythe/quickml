@@ -7,8 +7,12 @@ app = Flask(__name__)
 config_object = ConfigParser()
 config_object.read('config.ini')
 
+app.config['SECRET_KEY']='Th1s1ss3cr3t'
+app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///C:/Users/hasee/Downloads/sqlite-tools-win32-x86-3340000/sqlite-tools-win32-x86-3340000.library.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 db = SQLAlchemy(app)
+
 # db.create_all()
 
 '''
@@ -36,7 +40,7 @@ def token_required(f):
             return jsonify({'message': 'a valid token is missing'})
 
         try:
-            data = jwt.decode(token, config_object['SQLALCHEMY']['SECRET_KEY'])
+            data = jwt.decode(token, app.config['SECRET_KEY'])
             current_user = Users.query.filter_by(public_id = data['public_id']).first()
         except:
             return jsonify({'message': 'token is invalid'})            
@@ -72,7 +76,7 @@ def login_user():
     user = Users.query.filter_by(name=auth.username).first()
 
     if check_password_hash(user.password, auth.password):
-        token = jwt.encode({'public_id': user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(days=30)}, config_object['SQLALCHEMY']['SECRET_KEY'])  
+        token = jwt.encode({'public_id': user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(days=30)}, app.config['SECRET_KEY'])  
         return jsonify({'token' : token.decode('UTF-8')})
 
     return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
@@ -167,34 +171,97 @@ def train_models(df, column=None):
 '''
 Train model on specific column
 '''
-@app.route('/project/<projname>/models/<column>', methods=['GET', 'POST'])
+@app.route('/projects/<projname>/models/<column>', methods=['GET', 'POST'])
 @token_required
-def get_create_single_models(self, projname, column):
+def create_models_single_col(self, projname, column):
+
     if request.method == 'POST':
+
         df = pd.read_csv(BytesIO(request.files['file'].read()))
-        
-        df = df.select_dtypes(include=np.number)
+ 
+        df=df.select_dtypes(include=np.number)        
 
         trained_models = train_models(df, column)
 
         client = pymongo.MongoClient(config_object['MONGO']['host'])
         db = client.db
 
-        
+        auth = request.authorization
 
-        documents = db[f'{projname}'].insert_many([{'model-data': trained_models[key]} for key in trained_models])
+        user = Users.query.filter_by(name=auth.username).first()
+
+        db['projects'].insert_one({'name': f'{projname}', 'id': user.public_id})
+
+        db['projects'].update({'id':user.public_id},  {'$set': {'models': [{'model-name': key} for key in trained_models]}})
+
+        db['models'].insert_many([{'projname': projname, 'user_id': user.public_id, 'model-name': key, 'model-data': trained_models[key]} for key in trained_models])
 
         return '200'
-
     else:
-        pass
+        client = pymongo.MongoClient(config_object['MONGO']['host'])
+        db = client.db
+
+        documents = db[f'{projname}'].find()
+
+        print(documents)
+
+        return '200'
     
+
 '''
-Train model on all columns
+Test model on specific column
+'''
+@app.route('/projects/<projname>/models/<column>/test/', methods=['POST'])
+@token_required
+def test_models_single_col(self, projname, column):
+    
+    if request.method == 'POST':
+
+        model_list = []
+
+        df = pd.read_csv(BytesIO(request.files['file'].read()))
+        df = df.select_dtypes(include=np.number)
+
+        client = pymongo.MongoClient(config_object['MONGO']['host'])
+        db = client.db
+
+        auth = request.authorization
+
+        user = Users.query.filter_by(name=auth.username).first()
+
+        models = db['models'].find({'$and': [{'user_id': user.public_id},{'projname': projname}]})
+
+        lst = list(models)
+        for l in lst:
+            model_list.append([l['model-name'],pickle.loads(l['model-data'])])
+
+        tested_models = test_models(model_list, df)
+        colname=tested_models[0][0]
+        data=tested_models[0][1]
+      
+        df[colname] = data
+        file=df.to_csv()
+        # print(df)
+
+        response_stream = BytesIO(file.encode())
+        return send_file(
+            response_stream,
+            mimetype="text/csv",
+            attachment_filename="export.csv",
+            as_attachment=True
+        )
+
+        # return send_file(file, mimetype='text/csv',as_attachment=True, attachment_filename='export.csv')
+        # sending raw data as json
+        # return jsonify({'results': tested_models})
+
+
+'''
+Test model on all columns
 '''
 @app.route('/projects/<projname>/models/test/', methods=['POST'])
 @token_required
-def get_test_models_all(self, projname):
+def test_models_all(self, projname):
     
     if request.method == 'POST':
 
@@ -226,11 +293,11 @@ def get_test_models_all(self, projname):
         return jsonify({'results': tested_models})
 
 '''
-Get all models
+Train model on all columns
 '''
 @app.route('/projects/<projname>/models/', methods=['GET', 'POST'])
 @token_required
-def get_create_models(self, projname):
+def create_models_all(self, projname):
 
     if request.method == 'POST':
 
@@ -249,16 +316,9 @@ def get_create_models(self, projname):
 
         db['projects'].insert_one({'name': f'{projname}', 'id': user.public_id})
 
-        # db['projects'].find({'id': user.public_id})[f'{}']
-
         db['projects'].update({'id':user.public_id},  {'$set': {'models': [{'model-name': key} for key in trained_models]}})
 
         db['models'].insert_many([{'projname': projname, 'user_id': user.public_id, 'model-name': key, 'model-data': trained_models[key]} for key in trained_models])
-
-
-        # db['projects'].update({'id':user.public_id},  {'models': [{'model-name': key, 'model-data': trained_models[key]} for key in trained_models]})
-
-        # documents = db['projects'].insert_many([{'model-name': key, 'model-data': trained_models[key]} for key in trained_models])
 
         return '200'
     else:
@@ -270,11 +330,7 @@ def get_create_models(self, projname):
         print(documents)
 
         return '200'
-        # if documents.count==0:
-        #     return 'No models'
-        # else:
-        #     jsonify({'models': documents})
-
+ 
 '''
 Get specific model
 '''
