@@ -1,7 +1,7 @@
 from server2_imports import *
 
 app = Flask(__name__)
-# app.secret_key = 'Secretkey'
+# CORS(app)
 
 '''load config file'''
 config_object = ConfigParser()
@@ -9,7 +9,11 @@ config_object.read('config.ini')
 
 
 db = SQLAlchemy(app)
+# db.create_all()
 
+'''
+User data model
+'''
 class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     public_id = db.Column(db.Integer)
@@ -17,10 +21,9 @@ class Users(db.Model):
     password = db.Column(db.String(50))
     admin = db.Column(db.Boolean)
 
-CORS(app)
-
-# db.create_all()
-
+'''
+Decorator function for authentication
+'''
 def token_required(f):
     @wraps(f)
     def decorator(*args, **kwargs):

@@ -25,3 +25,6 @@ yarn-error.log*
 # config file, passwords etc.
 *config.py
 *config.ini
+
+# ignore flask session 
+/*_session/
