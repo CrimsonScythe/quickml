@@ -7,9 +7,6 @@ app = Flask(__name__)
 config_object = ConfigParser()
 config_object.read('config.ini')
 
-app.config['SECRET_KEY']='Th1s1ss3cr3t'
-app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///C:/Users/hasee/Downloads/sqlite-tools-win32-x86-3340000/sqlite-tools-win32-x86-3340000.library.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 db = SQLAlchemy(app)
 
@@ -36,7 +33,7 @@ def token_required(f):
             return jsonify({'message': 'a valid token is missing'})
 
         try:
-            data = jwt.decode(token, app.config['SECRET_KEY'])
+            data = jwt.decode(token, config_object['SQLALCHEMY']['SECRET_KEY'])
             current_user = Users.query.filter_by(public_id = data['public_id']).first()
         except:
             return jsonify({'message': 'token is invalid'})            
@@ -44,6 +41,9 @@ def token_required(f):
         return f(current_user, *args, **kwargs)
     return decorator
 
+'''
+Register user
+'''
 @app.route('/register', methods=['GET', 'POST'])
 def signup_user():
     data = request.get_json()
@@ -56,7 +56,9 @@ def signup_user():
 
     return jsonify({'message': 'registered successfully'})
 
-
+'''
+Sign in user
+'''
 @app.route('/login', methods=['GET', 'POST'])
 def login_user():
     auth = request.authorization
@@ -67,12 +69,14 @@ def login_user():
     user = Users.query.filter_by(name=auth.username).first()
 
     if check_password_hash(user.password, auth.password):
-        token = jwt.encode({'public_id': user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(days=30)}, app.config['SECRET_KEY'])  
+        token = jwt.encode({'public_id': user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(days=30)}, config_object['SQLALCHEMY']['SECRET_KEY'])  
         return jsonify({'token' : token.decode('UTF-8')})
 
     return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
 
-
+'''
+Get list of all users
+'''
 @app.route('/users', methods=['GET'])
 @token_required
 def get_all_users(self):
@@ -90,6 +94,9 @@ def get_all_users(self):
 
     return jsonify({'users': result})
 
+'''
+Get list of all projects
+'''
 @app.route('/projects/', methods=['GET'])
 @token_required
 def get_all_projects(self):
@@ -103,6 +110,9 @@ def get_all_projects(self):
     else:
         return jsonify({'projects': collections})
 
+'''
+Helper method for model inference
+'''
 def test_models(model_list, df):
     results=[]
     for model in model_list:
@@ -112,7 +122,9 @@ def test_models(model_list, df):
 
     return results
 
-
+'''
+Helper methid for model training
+'''
 def train_models(df, column=None):
 
     if column:
@@ -149,6 +161,9 @@ def train_models(df, column=None):
 
         return trained_models
 
+'''
+Train model on specific column
+'''
 @app.route('/project/<projname>/models/<column>', methods=['GET', 'POST'])
 @token_required
 def get_create_single_models(self, projname, column):
@@ -171,7 +186,9 @@ def get_create_single_models(self, projname, column):
     else:
         pass
     
-
+'''
+Train model on all columns
+'''
 @app.route('/projects/<projname>/models/test/', methods=['POST'])
 @token_required
 def get_test_models_all(self, projname):
@@ -205,7 +222,9 @@ def get_test_models_all(self, projname):
         
         return jsonify({'results': tested_models})
 
-
+'''
+Get all models
+'''
 @app.route('/projects/<projname>/models/', methods=['GET', 'POST'])
 @token_required
 def get_create_models(self, projname):
@@ -253,6 +272,9 @@ def get_create_models(self, projname):
         # else:
         #     jsonify({'models': documents})
 
+'''
+Get specific model
+'''
 @app.route('/projects/<projname>/models/<modelname>', methods=['GET'])
 @token_required
 def find_models(projname, modelname):
