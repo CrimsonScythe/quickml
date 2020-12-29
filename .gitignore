@@ -27,4 +27,4 @@ yarn-error.log*
 *config.ini
 
 # ignore flask session 
-*_session/
+/*_session/
