@@ -22,6 +22,7 @@ import jwt
 import pymongo
 from functools import wraps
 from configparser import ConfigParser
+import re
 
 app = Flask(__name__)
 # app.secret_key = 'Secretkey'
@@ -90,7 +91,7 @@ def login_user():
     user = Users.query.filter_by(name=auth.username).first()
 
     if check_password_hash(user.password, auth.password):
-        token = jwt.encode({'public_id': user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=30)}, app.config['SECRET_KEY'])  
+        token = jwt.encode({'public_id': user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(days=30)}, app.config['SECRET_KEY'])  
         return jsonify({'token' : token.decode('UTF-8')})
 
     return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
@@ -126,13 +127,14 @@ def get_all_projects(self):
     else:
         return jsonify({'projects': collections})
 
-# def test_models(df, models, column=None):
-#     if column:
-    
-
+def test_models(model_list, df):
+    results=[]
+    for model in model_list:
         
-#     else:
-#         pass
+        
+        results.append([model[0].split('-')[0],model[1].predict(df.drop(columns=[model[0].split('-')[0]])).tolist()])
+
+    return results
 
 
 def train_models(df, column=None):
@@ -194,7 +196,7 @@ def get_create_single_models(self, projname, column):
         pass
     
 
-@app.route('/projects/<projname>/models/test/', methods=['GET', 'POST'])
+@app.route('/projects/<projname>/models/test/', methods=['POST'])
 @token_required
 def get_test_models_all(self, projname):
     
@@ -218,13 +220,15 @@ def get_test_models_all(self, projname):
         for l in lst:
             # print(l['model-name'])
             # print(type(l))
-            model_list.append(pickle.loads(l['model-data']))
+            model_list.append([l['model-name'],pickle.loads(l['model-data'])])
 
-        # tested_models = test_models(models, df)
-        for j in model_list:
-            print(j)
+        tested_models = test_models(model_list, df)
 
-    return '200'
+        # for j in model_list:
+            # print(j)
+        
+        return jsonify({'results': tested_models})
+
 
 @app.route('/projects/<projname>/models/', methods=['GET', 'POST'])
 @token_required
@@ -275,7 +279,7 @@ def get_create_models(self, projname):
 
 @app.route('/projects/<projname>/models/<modelname>', methods=['GET'])
 @token_required
-def test_models(projname, modelname):
+def find_models(projname, modelname):
 
     client = pymongo.MongoClient(config_object['MONGO']['host'])
     db = client.db
@@ -293,91 +297,3 @@ def test_models(projname, modelname):
 if __name__ == '__main__':
     app.run(debug=True)
 
-
-    # @app.route('/post/prep', methods=['POST', 'OPTIONS'])
-# def upload():
-   
-#     print(request.files['file'])
-#     df = pd.read_csv(BytesIO(request.files['file'].read()))
-    
-#     numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
-#     cols = numeric_cols
-
-#     return jsonify(cols)
-
-# @app.route('/post/train', methods=['POST'])
-# def trainmodel():
-    
-    # # print(request.files)
-    # # print(request.form)
-    
-    # # print(request.files['file'].filename)
-
-    # fil = request.files['file']
-
-    # df = pd.read_csv(BytesIO(request.files['file'].read()))
-    # col = request.form['column_name']
-    
-    # reg = linear_model.LinearRegression()
-
-    # df=df.select_dtypes(include=np.number)
-
-    # reg.fit(X=df.drop(columns=[col]), y=df[col])
-    
-
-    # with open(f'{fil.filename[:-4]}.pickle', 'wb') as handle:
-    #     pickle.dump(reg, handle, protocol=pickle.HIGHEST_PROTOCOL)    
-
-    # # reg2 = pickle.loads(s)
-    # # preds=reg2.predict(df.drop(columns=[col]))
-
-    # return '200'
-
-# @app.route('/post/pred', methods=['POST'])
-# def pred():
-    
-#     fil = request.files['file']
-#     df = pd.read_csv(BytesIO(request.files['file'].read()))
-
-#     df=df.select_dtypes(include=np.number)
-
-#     col = request.form['column_name']
-
-#     with open(f'{fil.filename[:-4]}.pickle', 'rb') as handle:
-#         res=pickle.load(handle)
-    
-#     ret = res.predict(df.drop(columns=[col]))
-    
-#     print('preds')
-#     print(ret)
-
-#     return jsonify(ret.tolist())
-
-# # @app.route('/get/cols', methods=['GET'])
-# # def getcols():
-# #     # if request.method == 'OPTIONS':
-# #     #     resp = Response()
-# #     #     resp.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:3000/'
-# #     #     resp.headers['Access-Control-Allow-Credentials'] = True
-# #     #     resp.headers['Access-Control-Allow-Headers'] = "Content-Type"
-
-# #     #     return resp
-# #     # return '200'
-# #     print(session['cols'])
-# #     # print(session.get('cols'))
-# #     return jsonify(session['cols'])
-
-# # @app.after_request
-# # def after_request(response):
-# #   response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-# #   response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-# #   response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-# #   response.headers.add('Access-Control-Allow-Credentials', 'true')
-# #   return response
-
-# if __name__ == '__main__':
-#     app.run()
-
-# # def runModels(df):
-# #     reg = linear_model.LinearRegression()
-# #     reg.fit()
