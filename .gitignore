@@ -28,3 +28,4 @@ yarn-error.log*
 
 # ignore flask session 
 /*_session/
+*.pickle
