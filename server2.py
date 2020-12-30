@@ -1,3 +1,4 @@
+from pymongo.common import validate_ok_for_update
 from server2_imports import *
 
 app = Flask(__name__)
@@ -134,8 +135,14 @@ Helper methid for model training
 '''
 def train_models(df, column=None):
 
+    
     if column:
+
+        # train test split for cross val
+        X_train, X_test, y_train, y_test = train_test_split(df.drop(columns=[column]), df[column], test_size=0.33)
+
         trained_models={}
+        validated_models={}
 
         models={
             'linear': linear_model.LinearRegression(),
@@ -144,9 +151,17 @@ def train_models(df, column=None):
             # 'dt': tree.DecisionTreeClassifier()
         }
 
-        for name, model in models.items():
-            trained_models[f'{column}-{name}']=pickle.dumps(model.fit(df.drop(columns=[column]), df[column]))
+        
 
+        for name, model in models.items():
+            md = model.fit(X_train, y_train)
+            y_pred = md.predict(X_test)
+            mse=mean_squared_error(y_test, y_pred)
+            validated_models[mse]=[f'{column}-{name}', pickle.dumps(md)]
+            # trained_models[f'{column}-{name}']=pickle.dumps(model.fit(df.drop(columns=[column]), df[column]))
+
+        # get model with lowest mse
+        trained_models[validated_models[min(validated_models)][0]] = validated_models[min(validated_models)][1]
 
         return trained_models
 
@@ -192,7 +207,7 @@ def create_models_single_col(self, projname, column):
 
         db['projects'].insert_one({'name': f'{projname}', 'id': user.public_id})
 
-        db['projects'].update({'id':user.public_id},  {'$set': {'models': [{'model-name': key} for key in trained_models]}})
+        db['projects'].update({'$and':[{'id':user.public_id}, {'name': projname}]},  {'$set': {'models': [{'model-name': key} for key in trained_models]}})
 
         db['models'].insert_many([{'projname': projname, 'user_id': user.public_id, 'model-name': key, 'model-data': trained_models[key]} for key in trained_models])
 

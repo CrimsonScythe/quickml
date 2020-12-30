@@ -10,6 +10,9 @@ import numpy as np
 from sklearn import linear_model, svm
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import GridSearchCV
 from sklearn import tree
 from flask import Flask, session
 from flask import jsonify
