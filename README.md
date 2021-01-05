@@ -5,7 +5,7 @@ Flask app which runs standard ml models including linear regression, logistic re
 Cross validation is used to select the best model.
 
 ## tech & deployment
-MongoDB is used to store models. User data is stored locally using SQLite3.
+MongoDB Atlas is used to store models. User data is stored locally using SQLite3.
 The provided data is not stored on any database. It is only persisted locally in memory on the server instance.
 The app is dockerized and deployed on AWS EC2 instance.
 
