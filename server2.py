@@ -14,7 +14,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 db = SQLAlchemy(app)
 
-# db.create_all()
+
 
 '''
 User data model
@@ -25,6 +25,8 @@ class Users(db.Model):
     name = db.Column(db.String(50))
     password = db.Column(db.String(50))
     admin = db.Column(db.Boolean)
+
+# db.create_all()
 
 '''
 Decorator function for authentication
@@ -75,9 +77,10 @@ def login_user():
         return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
 
     user = Users.query.filter_by(name=auth.username).first()
-
+    
     if check_password_hash(user.password, auth.password):
         token = jwt.encode({'public_id': user.public_id, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(days=30)}, app.config['SECRET_KEY'])  
+        print(type(token))
         return jsonify({'token' : token.decode('UTF-8')})
 
     return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
@@ -327,13 +330,13 @@ def create_models_all(self, projname):
 
         auth = request.authorization
 
-        user = Users.query.filter_by(name=auth.username).first()
+        # user = Users.query.filter_by(name=auth.username).first()
 
-        db['projects'].insert_one({'name': f'{projname}', 'id': user.public_id})
+        # db['projects'].insert_one({'name': f'{projname}', 'id': user.public_id})
 
-        db['projects'].update({'id':user.public_id},  {'$set': {'models': [{'model-name': key} for key in trained_models]}})
+        # db['projects'].update({'id':user.public_id},  {'$set': {'models': [{'model-name': key} for key in trained_models]}})
 
-        db['models'].insert_many([{'projname': projname, 'user_id': user.public_id, 'model-name': key, 'model-data': trained_models[key]} for key in trained_models])
+        # db['models'].insert_many([{'projname': projname, 'user_id': user.public_id, 'model-name': key, 'model-data': trained_models[key]} for key in trained_models])
 
         return '200'
     else:
@@ -366,6 +369,18 @@ def find_models(projname, modelname):
         return 'No model'
 
 
+@app.route('/test/parallel', methods=['GET'])
+
+
+
+def test_parallel():
+    a=1 
+    print(f'Serving client {request.args.get("user")}')
+    while(a < 1000000000):
+        a+=1
+    print(f'finished client {request.args.get("user")}')
+    return '200'
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+
 
