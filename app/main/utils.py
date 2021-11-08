@@ -21,8 +21,6 @@ def train_models(df, column=None):
             # 'dt': tree.DecisionTreeClassifier()
         }
 
-        
-
         for name, model in models.items():
             print("fitting")
             md = model.fit(X_train, y_train)
@@ -31,7 +29,6 @@ def train_models(df, column=None):
             mse=mean_squared_error(y_test, y_pred)
             print("validated")
             validated_models[mse]=[f'{column}-{name}', pickle.dumps(md)]
-            # trained_models[f'{column}-{name}']=pickle.dumps(model.fit(df.drop(columns=[column]), df[column]))
 
         # get model with lowest mse
         trained_models[validated_models[min(validated_models)][0]] = validated_models[min(validated_models)][1]

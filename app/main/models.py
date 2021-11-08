@@ -35,8 +35,6 @@ class Projects(db.Model):
     name = db.Column(db.String(50))
     user_id = db.Column(db.Text, db.ForeignKey('users.public_id'))
 
-    # models = db.relationship('Models')
-
     def __init__(self, name, user_id):
         self.name = name
         self.user_id = user_id
@@ -55,8 +53,6 @@ class Models(db.Model):
     data = db.Column(db.LargeBinary)
     userId = db.Column(db.Text, db.ForeignKey('users.public_id'))
     projname = db.Column(db.String(50))
-    # projname = db.Column(db.String(50), db.ForeignKey('projects.name'))
-    # user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     def __init__(self, name, data, userId, projname):
         self.name = name

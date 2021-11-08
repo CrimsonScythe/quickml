@@ -7,6 +7,7 @@ from utils import *
 app = Flask(__name__)
 
 '''load config file'''
+#TODO: clean this stuff up!
 config_object = ConfigParser()
 config_object.read('../../config.ini')
 
@@ -14,9 +15,6 @@ app.config['SECRET_KEY']='Th1s1ss3cr3t'
 app.config['SQLALCHEMY_DATABASE_URI']='postgresql://postgres:root@localhost:5432/quickml2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
-# if __name__ == '__main__':
-
-# app.run(debug=True)
 
 '''
 Decorator function for authentication
@@ -75,6 +73,7 @@ def login_user():
 
     return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
 
+#TODO: fix db call and test
 '''
 Get list of all users
 '''
@@ -96,15 +95,13 @@ def get_all_users(self):
     return jsonify({'users': result})
 
     
-
+#TODO: fix db call
 '''
 Get list of all projects
 '''
 @app.route('/projects/', methods=['GET'])
 @token_required
 def get_all_projects(self):
-    # client = pymongo.MongoClient(config_object['MONGO']['host'])
-    # db = client.db
 
     collections = db.list_collection_names()
 
@@ -113,6 +110,7 @@ def get_all_projects(self):
     else:
         return jsonify({'projects': collections})
 
+#TODO: test this
 '''
 Get specific model
 '''
@@ -120,29 +118,13 @@ Get specific model
 @token_required
 def find_models(projname, modelname):
 
-    # client = pymongo.MongoClient(config_object['MONGO']['host'])
-    # db = client.db
-
-    model = db['projects'].find({'$and': [{'models': modelname},{"name": f"{projname}"}]})
-
-    # model = db[f'{projname}'].find({"name": f"{modelname}"})
+    # model = db['projects'].find({'$and': [{'models': modelname},{"name": f"{projname}"}]})
+    model = Models.query.filter_by(name=modelname, projname=projname).first()
 
     if model:
         return jsonify({"model": model})
     else:
         return 'No model'
-
-
-@app.route('/test/parallel', methods=['GET'])
-def test_parallel():
-    a=1 
-    print(f'Serving client {request.args.get("user")}')
-    while(a < 1000000000):
-        a+=1
-    print(f'finished client {request.args.get("user")}')
-    return '200'
-
-#############
 
 
 '''
@@ -157,27 +139,17 @@ def test_models_single_col(self, projname, column):
         model_list = []
         
         df = pd.read_csv(BytesIO(request.files['file'].read()))
-        
         df = df.select_dtypes(include=np.number)
-        
-
-        # client = pymongo.MongoClient(config_object['MONGO']['host'])
-        # db = client.db
 
         auth = request.authorization
 
         user = Users.query.filter_by(name=auth.username).first()
 
         models = Models.query.filter_by(projname=projname, userId=user.public_id).all()
-        print(models)
-        # models = db['models'].find({'$and': [{'user_id': user.public_id},{'projname': projname}]})
         
-        print('getting list')
         lst = list(models)
-        print('list is')
-        print(lst)
+        
         for l in lst:
-            # print(l['name'])
             model_list.append([l.name,pickle.loads(l.data)]) #TODO: when to use list and when not to, maybe use hashtable here? 
 
         tested_models = test_models(model_list, df)
@@ -195,13 +167,10 @@ def test_models_single_col(self, projname, column):
             as_attachment=True
         )
 
-        return '200'
-
 
 '''
 Train model on specific column
 '''
-
 #TODO: add support for multiple columns
 #TODO: fix duplicate projects
 #TODO: fix duplicate models
@@ -220,9 +189,7 @@ def create_models_single_col(self, projname, column):
         print("training")
         trained_models = train_models(df, column)
         print("done training")
-        # client = pymongo.MongoClient(config_object['MONGO']['host'])
-        # db = client.db
-
+  
         auth = request.authorization
 
         user = Users.query.filter_by(name=auth.username).first()
@@ -233,16 +200,9 @@ def create_models_single_col(self, projname, column):
         
         db.session.bulk_save_objects([Models(name=key, data=trained_models[key], userId=user.public_id, projname=projname) for key in trained_models])
         db.session.commit()
-        # db['projects'].insert_one({'name': f'{projname}', 'id': user.public_id})
-
-        # db['projects'].update({'$and':[{'id':user.public_id}, {'name': projname}]},  {'$set': {'models': [{'model-name': key} for key in trained_models]}})
-
-        # db['models'].insert_many([{'projname': projname, 'user_id': user.public_id, 'model-name': key, 'model-data': trained_models[key]} for key in trained_models])
 
         return '200'
     else:
-        # client = pymongo.MongoClient(config_object['MONGO']['host'])
-        # db = client.db
 
         documents = db[f'{projname}'].find()
 
@@ -250,81 +210,6 @@ def create_models_single_col(self, projname, column):
 
         return '200'
     
-'''
-Test model on all columns
-'''
-@app.route('/projects/<projname>/models/test/', methods=['POST'])
-@token_required
-def test_models_all(self, projname):
-    
-    if request.method == 'POST':
-
-        model_list = []
-
-        df = pd.read_csv(BytesIO(request.files['file'].read()))
-        df = df.select_dtypes(include=np.number)
-
-        # client = pymongo.MongoClient(config_object['MONGO']['host'])
-        # db = client.db
-
-        auth = request.authorization
-
-        user = Users.query.filter_by(name=auth.username).first()
-
-        models = db['models'].find({'$and': [{'user_id': user.public_id},{'projname': projname}]})
-
-        lst = list(models)
-        for l in lst:
-            # print(l['model-name'])
-            # print(type(l))
-            model_list.append([l['model-name'],pickle.loads(l['model-data'])])
-
-        tested_models = test_models(model_list, df)
-
-        # for j in model_list:
-            # print(j)
-        
-        return jsonify({'results': tested_models})
-
-'''
-Train model on all columns
-'''
-@app.route('/projects/<projname>/models/', methods=['GET', 'POST'])
-@token_required
-def create_models_all(self, projname):
-
-    if request.method == 'POST':
-
-        df = pd.read_csv(BytesIO(request.files['file'].read()))
- 
-        df=df.select_dtypes(include=np.number)        
-
-        trained_models = train_models(df)
-
-        # client = pymongo.MongoClient(config_object['MONGO']['host'])
-        # db = client.db
-
-        auth = request.authorization
-
-        # user = Users.query.filter_by(name=auth.username).first()
-
-        # db['projects'].insert_one({'name': f'{projname}', 'id': user.public_id})
-
-        # db['projects'].update({'id':user.public_id},  {'$set': {'models': [{'model-name': key} for key in trained_models]}})
-
-        # db['models'].insert_many([{'projname': projname, 'user_id': user.public_id, 'model-name': key, 'model-data': trained_models[key]} for key in trained_models])
-
-        return '200'
-    else:
-        # client = pymongo.MongoClient(config_object['MONGO']['host'])
-        # db = client.db
-
-        documents = db[f'{projname}'].find()
-
-        print(documents)
-
-        return '200'
-
 if __name__ == '__main__':
     db.init_app(app)
     with app.app_context():
