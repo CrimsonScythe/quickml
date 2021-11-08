@@ -9,6 +9,7 @@ services:
       - "5000:5000"
     volumes:
       - .:/quickml
+    restart: on-failure:10
   db:
     environment:
       POSTGRES_USER: postgres
