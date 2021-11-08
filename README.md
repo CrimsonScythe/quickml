@@ -1,20 +1,26 @@
 # quickml
 minimal app to quickly and easily train and run ml models
-## description
+## Description
 Flask app which runs standard ml models including linear regression, logistic regression, naive bayes and decision trees to create regression models.
 Cross validation is used to select the best model.
 
-## tech & deployment
+## Tech & deployment
 
 PostgreSQL is used to store user data and serialized scikit models.
 Provided CSV data is not stored. It is only persisted locally in memory on the server instance.
 The app is dockerized.
 
-## examples & endpoints
+## How to run 
+Simply run ```docker-compose up```.
+
+The app listens on port ```5000```.
+
+## Examples & endpoints
 Curl request examples for api endpoints are as follows:
 
 #### Register user:
 ```POST 'http://0.0.0.0:5000/register'```
+
 Pass a JSON object in the body as follows:
 ```{"name":"a", "password": "a"}```
 
