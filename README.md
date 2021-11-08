@@ -42,7 +42,7 @@ In the body section:
 
 Add 'file' with value linking to a CSV file.
 
-You can use 'BankChurners.csv' or '5m Sales Records' if you want to test multiprocessing for example.
+You can use 'BankChurners.csv' or '5m Sales Records'  (available here https://eforexcel.com/wp/wp-content/uploads/2020/09/5m-Sales-Records.zip)  if you want to test multiprocessing for example.
 
 #### Run prediction using created model:
 ```POST 'http://0.0.0.0.:5000/projects/b/models/Dependent_count/test/'```
