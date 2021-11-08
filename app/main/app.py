@@ -1,7 +1,9 @@
 # from pymongo.common import validate_ok_for_update
+import multiprocessing
 from server2_imports import *
 from models import *
 from utils import *
+from multiprocessing import Process
 # import evaluators
 
 app = Flask(__name__)
@@ -15,6 +17,7 @@ app.config['SECRET_KEY']='Th1s1ss3cr3t'
 app.config['SQLALCHEMY_DATABASE_URI']='postgresql://postgres:root@localhost:5432/quickml2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
+queue = multiprocessing.Queue()
 
 '''
 Decorator function for authentication
@@ -73,7 +76,6 @@ def login_user():
 
     return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
 
-#TODO: fix db call and test
 '''
 Get list of all users
 '''
@@ -95,7 +97,6 @@ def get_all_users(self):
     return jsonify({'users': result})
 
     
-#TODO: fix db call
 '''
 Get list of all projects
 '''
@@ -103,26 +104,31 @@ Get list of all projects
 @token_required
 def get_all_projects(self):
 
-    collections = db.list_collection_names()
+    collections = Projects.query.with_entities(Projects.name).all()
 
     if len(collections)==0:
         return 'no projects'
     else:
         return jsonify({'projects': collections})
 
-#TODO: test this
 '''
 Get specific model
 '''
-@app.route('/projects/<projname>/models/<modelname>', methods=['GET'])
+@app.route('/projects/<projname>/models/<modelname>', methods=['POST'])
 @token_required
-def find_models(projname, modelname):
+def find_models(self, projname, modelname):
 
-    # model = db['projects'].find({'$and': [{'models': modelname},{"name": f"{projname}"}]})
-    model = Models.query.filter_by(name=modelname, projname=projname).first()
-
+    model = Models.query.with_entities(Models.data).filter_by(name=modelname, projname=projname).first()
+    print(model)
     if model:
-        return jsonify({"model": model})
+
+        return send_file(
+            model,
+            mimetype="application/python-pickle",
+            attachment_filename="export.pickle",
+            as_attachment=True
+        )
+    
     else:
         return 'No model'
 
@@ -150,7 +156,7 @@ def test_models_single_col(self, projname, column):
         lst = list(models)
         
         for l in lst:
-            model_list.append([l.name,pickle.loads(l.data)]) #TODO: when to use list and when not to, maybe use hashtable here? 
+            model_list.append([l.name,pickle.loads(l.data)])  
 
         tested_models = test_models(model_list, df)
         colname=tested_models[0][0]
@@ -181,16 +187,15 @@ Train model on specific column
 def create_models_single_col(self, projname, column):
 
     if request.method == 'POST':
-
-        print("starting read")
-        df = pd.read_csv(BytesIO(request.files['file'].read()))
-        print("done reading")
-        df=df.select_dtypes(include=np.number)        
-        print("training")
-        trained_models = train_models(df, column)
-        print("done training")
-  
         auth = request.authorization
+        df = pd.read_csv(BytesIO(request.files['file'].read()))
+        df=df.select_dtypes(include=np.number)        
+
+        process = Process(target=train_models, args=(df, queue, column))
+        process.start()
+        process.join()
+        
+        trained_models = queue.get()
 
         user = Users.query.filter_by(name=auth.username).first()
 
@@ -210,6 +215,7 @@ def create_models_single_col(self, projname, column):
 
         return '200'
     
+
 if __name__ == '__main__':
     db.init_app(app)
     with app.app_context():

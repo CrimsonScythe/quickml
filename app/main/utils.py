@@ -3,7 +3,7 @@ from server2_imports import *
 '''
 Helper method for model training
 '''
-def train_models(df, column=None):
+def train_models(df, queue, column=None):
 
     
     if column:
@@ -17,7 +17,7 @@ def train_models(df, column=None):
         models={
             'linear': linear_model.LinearRegression(),
             # 'svm': svm.SVR(),
-            'nn': KNeighborsRegressor(),
+            # 'nn': KNeighborsRegressor(),
             # 'dt': tree.DecisionTreeClassifier()
         }
 
@@ -32,7 +32,8 @@ def train_models(df, column=None):
 
         # get model with lowest mse
         trained_models[validated_models[min(validated_models)][0]] = validated_models[min(validated_models)][1]
-
+        
+        queue.put(trained_models)
         return trained_models
 
     else:
