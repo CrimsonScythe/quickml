@@ -7,7 +7,6 @@ def train_models(df, queue, column=None):
 
     
     if column:
-        print("column")
         # train test split for cross val
         X_train, X_test, y_train, y_test = train_test_split(df.drop(columns=[column]), df[column], test_size=0.33)
 
@@ -22,12 +21,9 @@ def train_models(df, queue, column=None):
         }
 
         for name, model in models.items():
-            print("fitting")
             md = model.fit(X_train, y_train)
-            print("pred")
             y_pred = md.predict(X_test)
             mse=mean_squared_error(y_test, y_pred)
-            print("validated")
             validated_models[mse]=[f'{column}-{name}', pickle.dumps(md)]
 
         # get model with lowest mse

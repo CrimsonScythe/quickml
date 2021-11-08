@@ -33,3 +33,10 @@ yarn-error.log*
 
 # ignore venv
 /env
+
+
+/postgres-data
+/__pycache__
+/tests
+/.ionide
+/app/main/__pycache__

@@ -14,7 +14,7 @@ config_object = ConfigParser()
 config_object.read('../../config.ini')
 
 app.config['SECRET_KEY']='Th1s1ss3cr3t'
-app.config['SQLALCHEMY_DATABASE_URI']='postgresql://postgres:root@localhost:5432/quickml2'
+app.config['SQLALCHEMY_DATABASE_URI']='postgresql://postgres:root@db:5432/quickml2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 queue = multiprocessing.Queue()
@@ -182,7 +182,7 @@ Train model on specific column
 #TODO: fix duplicate models
 #TODO: only gets model with lowest MSE
 #TODO: check whether trained model is already stored before calling train function- hash table to check for membership?
-@app.route('/projects/<projname>/models/<column>', methods=['GET', 'POST'])
+@app.route('/projects/<projname>/models/<column>/train', methods=['GET', 'POST'])
 @token_required
 def create_models_single_col(self, projname, column):
 
