@@ -1,21 +1,14 @@
-# from pymongo.common import validate_ok_for_update
 import multiprocessing
 from server2_imports import *
 from models import *
 from utils import *
 from multiprocessing import Process
-# import evaluators
+import default_settings
 
 app = Flask(__name__)
 
 '''load config file'''
-#TODO: clean this stuff up!
-config_object = ConfigParser()
-config_object.read('../../config.ini')
-
-app.config['SECRET_KEY']='Th1s1ss3cr3t'
-app.config['SQLALCHEMY_DATABASE_URI']='postgresql://postgres:root@db:5432/quickml2'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+app.config.from_object(default_settings)
 
 queue = multiprocessing.Queue()
 
@@ -173,15 +166,10 @@ def test_models_single_col(self, projname, column):
             as_attachment=True
         )
 
-
 '''
 Train model on specific column
 '''
-#TODO: add support for multiple columns
-#TODO: fix duplicate projects
-#TODO: fix duplicate models
-#TODO: only gets model with lowest MSE
-#TODO: check whether trained model is already stored before calling train function- hash table to check for membership?
+#TODO: check whether trained model is already stored before calling train function?
 @app.route('/projects/<projname>/models/<column>/train', methods=['GET', 'POST'])
 @token_required
 def create_models_single_col(self, projname, column):

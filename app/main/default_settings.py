@@ -1,0 +1,3 @@
+SECRET_KEY='Th1s1ss3cr3t'
+SQLALCHEMY_DATABASE_URI='postgresql://postgres:root@db:5432/quickml2'
+SQLALCHEMY_TRACK_MODIFICATIONS= True

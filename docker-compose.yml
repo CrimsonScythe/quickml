@@ -23,21 +23,3 @@ services:
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
 
-# version: '3.8'
-
-# services:
-#   api:
-#     build: .
-#     depends_on:
-#       - db
-#     environment:
-#       SQLALCHEMY_DATABASE_URI: postgresql+psycopg2://test:test@db/test
-#     networks:
-#       - default
-#     ports:
-#       - 5000:5000
-#     volumes:
-#       - ./app:/usr/src/app/app
-#       - ./migrations:/usr/src/app/migrations
-#     restart: always
-

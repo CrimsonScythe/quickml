@@ -57,7 +57,7 @@ def test_models(model_list, df):
     results=[]
     for model in model_list:
         
-        
-        results.append([model[0].split('-')[0],model[1].predict(df.drop(columns=[model[0].split('-')[0]])).tolist()]) #TODO: break up into smaller chunks
+        #TODO: break up into smaller chunks
+        results.append([model[0].split('-')[0],model[1].predict(df.drop(columns=[model[0].split('-')[0]])).tolist()]) 
 
     return results
